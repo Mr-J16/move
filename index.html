@@ -244,6 +244,20 @@ tr:hover td{background:rgba(201,168,76,.03)}
 .final-confirm-box .fc-title{font-weight:700;color:#5DD68A;margin-bottom:.3rem}
 .final-confirm-box .fc-sub{font-size:13px;color:var(--text2)}
 
+.admin-tabs{display:flex;gap:8px;margin-bottom:1rem}
+.admin-tab-btn{padding:8px 20px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;transition:all .2s;border:1px solid var(--border);background:var(--dark2);color:var(--text2);font-family:'DM Sans',sans-serif}
+.admin-tab-btn:hover{border-color:var(--border2);color:var(--text)}
+.admin-tab-btn.active{background:linear-gradient(135deg,var(--gold),var(--gold-dark));color:#000;border-color:transparent}
+
+/* USER TABLE */
+.user-avatar{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--gold),var(--gold-dark));display:inline-flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#000;flex-shrink:0}
+.user-cell{display:flex;align-items:center;gap:10px}
+.user-bookings-count{display:inline-flex;align-items:center;justify-content:center;background:rgba(201,168,76,0.15);color:var(--gold);border-radius:20px;padding:2px 10px;font-size:11px;font-weight:700}
+
+@media(max-width:600px){
+  .admin-tabs{flex-direction:column}
+}
+
 @media(max-width:600px){
   .hero-stats{gap:1.5rem}
   .field-row{grid-template-columns:1fr}
@@ -488,56 +502,64 @@ tr:hover td{background:rgba(201,168,76,.03)}
       <div>
         <h2 style="font-size:1.5rem">Panel de administración</h2>
         <p style="font-size:13px;color:var(--text2);margin-top:.3rem">MoveElite — Gestión de reservas</p>
+        <!-- API STATUS PILLS -->
+        <div class="api-status-bar" id="apiStatusBar">
+          <div class="api-pill" id="pill-firebase">
+            <span class="s-dot checking"></span>Firebase
+          </div>
+          <div class="api-pill" id="pill-maps">
+            <span class="s-dot checking"></span>Google Maps
+          </div>
+          <div class="api-pill" id="pill-places">
+            <span class="s-dot checking"></span>Places API
+          </div>
+          <div class="api-pill" id="pill-matrix">
+            <span class="s-dot checking"></span>Distance Matrix
+          </div>
+        </div>
       </div>
       <button class="nav-btn outline" onclick="doLogout()">Cerrar sesión</button>
     </div>
     <div class="admin-stats" id="adminStats"></div>
-    <div class="admin-table-wrap">
+
+    <!-- TABS -->
+    <div class="admin-tabs">
+      <button class="admin-tab-btn active" id="tabBtnBookings" onclick="switchAdminTab('bookings')">🗓️ Reservas</button>
+      <button class="admin-tab-btn" id="tabBtnUsers" onclick="switchAdminTab('users')">👥 Usuarios</button>
+    </div>
+
+    <!-- TAB: RESERVAS -->
+    <div id="adminTabBookings" class="admin-table-wrap">
       <div class="admin-table-header">
         <h3>Reservas registradas</h3>
         <span class="badge pending" id="totalBadge">0 reservas</span>
       </div>
       <div id="adminTableBody"></div>
     </div>
+
+    <!-- TAB: USUARIOS -->
+    <div id="adminTabUsers" class="admin-table-wrap" style="display:none">
+      <div class="admin-table-header">
+        <h3>Usuarios registrados</h3>
+        <span class="badge pending" id="usersBadge">0 usuarios</span>
+      </div>
+      <div id="adminUsersBody"></div>
+    </div>
   </div>
 </div>
 
-<!-- STATUS PANEL -->
-<div id="statusPanel" style="
-  position:fixed;bottom:1.5rem;left:1.5rem;z-index:999;
-  background:var(--dark2);border:1px solid var(--border);border-radius:12px;
-  padding:1rem 1.2rem;min-width:240px;box-shadow:0 8px 32px rgba(0,0,0,.5);
-  font-size:12px;font-family:'DM Sans',sans-serif;
-  transform:translateY(20px);opacity:0;transition:all .4s cubic-bezier(.16,1,.3,1)
-">
-  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.8rem">
-    <span style="font-weight:700;color:var(--text);font-size:13px">🔌 Estado de conexiones</span>
-    <button onclick="document.getElementById('statusPanel').style.display='none'"
-      style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:16px;line-height:1;padding:0">✕</button>
-  </div>
-  <div id="statusFirebase" class="status-row">
-    <span class="status-dot checking"></span>
-    <span class="status-label">Firebase / Firestore</span>
-    <span class="status-val">verificando…</span>
-  </div>
-  <div id="statusGMaps" class="status-row">
-    <span class="status-dot checking"></span>
-    <span class="status-label">Google Maps JS</span>
-    <span class="status-val">verificando…</span>
-  </div>
-  <div id="statusPlaces" class="status-row">
-    <span class="status-dot checking"></span>
-    <span class="status-label">Places API</span>
-    <span class="status-val">verificando…</span>
-  </div>
-  <div id="statusDistMatrix" class="status-row">
-    <span class="status-dot checking"></span>
-    <span class="status-label">Distance Matrix API</span>
-    <span class="status-val">verificando…</span>
-  </div>
-</div>
+<!-- STATUS PANEL — solo visible en admin, integrado en el header -->
 
 <style>
+.api-status-bar{display:flex;flex-wrap:wrap;gap:8px;margin-top:.8rem}
+.api-pill{display:inline-flex;align-items:center;gap:6px;background:var(--dark3);border:1px solid var(--border);border-radius:20px;padding:4px 12px;font-size:11px;font-weight:500;color:var(--text2);transition:all .3s}
+.api-pill .s-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;animation:pulse 1.2s infinite}
+.api-pill .s-dot.ok{background:#5DD68A;animation:none}
+.api-pill .s-dot.error{background:#E07070;animation:none}
+.api-pill .s-dot.checking{background:var(--text3)}
+.api-pill.ok{border-color:rgba(93,214,138,0.3)}
+.api-pill.error{border-color:rgba(224,112,112,0.3)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
 .status-row{display:flex;align-items:center;gap:8px;padding:.35rem 0;border-bottom:1px solid var(--border)}
 .status-row:last-child{border-bottom:none}
 .status-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
@@ -550,7 +572,6 @@ tr:hover td{background:rgba(201,168,76,.03)}
 .status-val.ok{color:#5DD68A}
 .status-val.error{color:#E07070}
 .status-val.warn{color:var(--gold)}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
 </style>
 
 <div class="toast" id="toast"></div>
@@ -576,70 +597,74 @@ const firebaseApp = initializeApp(firebaseConfig);
 const analytics = getAnalytics(firebaseApp);
 const db = getFirestore(firebaseApp);
 
-// === STATUS PANEL ===
-function setStatus(id, state, val){
-  const row = document.getElementById(id);
-  if(!row) return;
-  const dot = row.querySelector('.status-dot');
-  const valEl = row.querySelector('.status-val');
-  dot.className = 'status-dot ' + state;
-  valEl.className = 'status-val ' + state;
-  valEl.textContent = val;
+// === STATUS PILLS ===
+function setPillStatus(id, state, label){
+  const pill = document.getElementById('pill-'+id);
+  if(!pill) return;
+  const dot = pill.querySelector('.s-dot');
+  dot.className = 's-dot ' + state;
+  pill.className = 'api-pill ' + state;
+  pill.innerHTML = `<span class="s-dot ${state}"></span>${label}`;
+}
+
+// Mantener compatibilidad con setStatus antiguo (usado en loadFromFirestore)
+function setStatus(id, st, val){
+  const map = {
+    statusFirebase:'firebase', statusGMaps:'maps',
+    statusPlaces:'places', statusDistMatrix:'matrix'
+  };
+  const pillId = map[id];
+  if(!pillId) return;
+  const stateMap = {ok:'ok', error:'error', warn:'warn', checking:'checking'};
+  setPillStatus(pillId, stateMap[st]||'checking', val);
 }
 
 async function checkConnections(){
-  const panel = document.getElementById('statusPanel');
-  panel.style.display = 'block';
-  setTimeout(() => { panel.style.opacity='1'; panel.style.transform='translateY(0)'; }, 50);
-
   // 1. Google Maps JS
   if(window.google && window.google.maps){
-    setStatus('statusGMaps', 'ok', '✓ Cargado');
+    setPillStatus('maps', 'ok', 'Google Maps ✓');
   } else {
-    setStatus('statusGMaps', 'error', '✗ No disponible');
+    setPillStatus('maps', 'error', 'Google Maps ✗');
   }
 
   // 2. Places API
-  if(window.google && window.google.maps && window.google.maps.places){
+  if(window.google?.maps?.places){
     try {
       const svc = new google.maps.places.AutocompleteService();
       await new Promise((resolve, reject) => {
         svc.getPlacePredictions({ input: 'Santiago', componentRestrictions:{country:'cl'} }, (res, status) => {
-          if(status === google.maps.places.PlacesServiceStatus.OK) resolve();
-          else reject(status);
+          status === google.maps.places.PlacesServiceStatus.OK ? resolve() : reject(status);
         });
       });
-      setStatus('statusPlaces', 'ok', '✓ Activa');
+      setPillStatus('places', 'ok', 'Places API ✓');
     } catch(e) {
-      setStatus('statusPlaces', 'error', '✗ Error: '+e);
+      setPillStatus('places', 'error', 'Places API ✗');
     }
   } else {
-    setStatus('statusPlaces', 'error', '✗ No disponible');
+    setPillStatus('places', 'error', 'Places API ✗');
   }
 
   // 3. Distance Matrix API
-  if(window.google && window.google.maps && window.google.maps.DistanceMatrixService){
+  if(window.google?.maps?.DistanceMatrixService){
     try {
       const svc = new google.maps.DistanceMatrixService();
       await new Promise((resolve, reject) => {
         svc.getDistanceMatrix({
-          origins: ['Santiago Centro, Santiago, Chile'],
-          destinations: ['Las Condes, Santiago, Chile'],
+          origins: ['Santiago Centro, Chile'],
+          destinations: ['Las Condes, Chile'],
           travelMode: google.maps.TravelMode.DRIVING
         }, (res, status) => {
-          if(status === 'OK' && res.rows[0].elements[0].status === 'OK') resolve(res);
-          else reject(status);
+          status === 'OK' && res.rows[0].elements[0].status === 'OK' ? resolve() : reject(status);
         });
       });
-      setStatus('statusDistMatrix', 'ok', '✓ Activa');
+      setPillStatus('matrix', 'ok', 'Distance Matrix ✓');
     } catch(e) {
-      setStatus('statusDistMatrix', 'error', '✗ Error: '+e);
+      setPillStatus('matrix', 'error', 'Distance Matrix ✗');
     }
   } else {
-    setStatus('statusDistMatrix', 'error', '✗ No disponible');
+    setPillStatus('matrix', 'error', 'Distance Matrix ✗');
   }
-
-  // 4. Firebase / Firestore — se actualiza en loadFromFirestore
+  // Firebase se actualiza en loadFromFirestore
 }
 
 // Cargar reservas y usuarios desde Firestore al iniciar
@@ -656,11 +681,11 @@ async function loadFromFirestore() {
     state.bookingCount = maxCount;
     localStorage.setItem('me_count', maxCount.toString());
     saveData();
-    setStatus('statusFirebase', 'ok', `✓ ${state.bookings.length} reservas`);
+    setPillStatus('firebase', 'ok', `Firebase ✓ (${state.bookings.length})`);
   } catch(e) {
     console.warn('Firestore no disponible, usando localStorage:', e);
     const msg = e?.code || e?.message || String(e);
-    setStatus('statusFirebase', 'error', '✗ ' + msg.slice(0,28));
+    setPillStatus('firebase', 'error', 'Firebase ✗');
   }
 }
 
@@ -1187,7 +1212,7 @@ function showView(v){
   document.querySelectorAll('.view').forEach(x=>x.classList.remove('active'));
   document.getElementById('view-'+v).classList.add('active');
   window.scrollTo({top:0,behavior:'smooth'});
-  if(v==='admin') renderAdmin();
+  if(v==='admin'){ renderAdmin(); checkConnections(); }
   if(v==='booking') setTodayDate();
 }
 
@@ -1198,6 +1223,13 @@ function setTodayDate(){
 }
 
 // === ADMIN ===
+function switchAdminTab(tab){
+  document.getElementById('tabBtnBookings').classList.toggle('active', tab==='bookings');
+  document.getElementById('tabBtnUsers').classList.toggle('active', tab==='users');
+  document.getElementById('adminTabBookings').style.display = tab==='bookings' ? 'block' : 'none';
+  document.getElementById('adminTabUsers').style.display = tab==='users' ? 'block' : 'none';
+}
+
 function renderAdmin(){
   const bookings = state.bookings;
   const users = state.users;
@@ -1208,6 +1240,12 @@ function renderAdmin(){
     <div class="admin-stat"><div class="admin-stat-label">Usuarios registrados</div><div class="admin-stat-value">${users.length}</div></div>
     <div class="admin-stat"><div class="admin-stat-label">Ticket promedio</div><div class="admin-stat-value">${bookings.length?'$'+(Math.round(totalRev/bookings.length)).toLocaleString('es-CL'):'—'}</div></div>
   `;
+  renderBookingsTable();
+  renderUsersTable();
+}
+
+function renderBookingsTable(){
+  const bookings = state.bookings;
   document.getElementById('totalBadge').textContent = bookings.length+' reservas';
   if(!bookings.length){
     document.getElementById('adminTableBody').innerHTML = '<div class="empty-state"><p>No hay reservas registradas aún.</p></div>';
@@ -1217,7 +1255,7 @@ function renderAdmin(){
     <tr>
       <td>${b.id}<br><small style="color:var(--text3);font-size:11px">${b.createdAt}</small></td>
       <td class="td-contact">${b.user}<small>${b.phone}</small><small>${b.email}</small></td>
-      <td style="max-width:200px;word-break:break-word">${b.orig}${b.stops.length?' → '+b.stops.join(' → '):''} → ${b.dest}</td>
+      <td style="max-width:200px;word-break:break-word">${b.orig}${b.stops&&b.stops.length?' → '+b.stops.join(' → '):''} → ${b.dest}</td>
       <td>${b.date}<br><small>${b.time} · ${b.pax} pax · ${TRIP_TYPES.find(t=>t.id===b.tripType)?.name||b.tripType}</small></td>
       <td style="color:var(--gold);font-weight:600">$${b.price.toLocaleString('es-CL')}</td>
       <td>
@@ -1233,6 +1271,61 @@ function renderAdmin(){
     </table>`;
 }
 
+function renderUsersTable(){
+  const users = state.users;
+  const bookings = state.bookings;
+  document.getElementById('usersBadge').textContent = users.length+' usuarios';
+
+  if(!users.length){
+    document.getElementById('adminUsersBody').innerHTML = '<div class="empty-state"><p>No hay usuarios registrados aún.</p></div>';
+    return;
+  }
+
+  const rows = [...users].reverse().map(u => {
+    const initials = (u.name?.[0]||'')+(u.lastname?.[0]||'');
+    const userBookings = bookings.filter(b => b.email === u.email);
+    const totalSpent = userBookings.filter(b=>b.status==='confirmed').reduce((a,b)=>a+b.price,0);
+    return `
+      <tr>
+        <td>
+          <div class="user-cell">
+            <div class="user-avatar">${initials.toUpperCase()||'?'}</div>
+            <div>
+              <div style="color:var(--text);font-weight:600">${u.name} ${u.lastname||''}</div>
+              <div style="font-size:11px;color:var(--text3);margin-top:2px">Desde: ${u.registeredAt||'—'}</div>
+            </div>
+          </div>
+        </td>
+        <td>
+          <div>${u.email}</div>
+          <div style="font-size:12px;color:var(--text3);margin-top:2px">${u.phone||'—'}</div>
+        </td>
+        <td style="color:var(--text2)">${u.rut||'—'}</td>
+        <td style="text-align:center">
+          <span class="user-bookings-count">${userBookings.length} viaje${userBookings.length!==1?'s':''}</span>
+        </td>
+        <td style="color:var(--gold);font-weight:600">${totalSpent>0?'$'+totalSpent.toLocaleString('es-CL'):'—'}</td>
+        <td><span class="badge confirmed">✓ Activo</span></td>
+      </tr>
+    `;
+  }).join('');
+
+  document.getElementById('adminUsersBody').innerHTML = `
+    <table>
+      <thead>
+        <tr>
+          <th>Usuario</th>
+          <th>Contacto</th>
+          <th>RUT</th>
+          <th style="text-align:center">Viajes</th>
+          <th>Total gastado</th>
+          <th>Estado</th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+}
+
 // === TOAST ===
 function showToast(msg, type='success'){
   const t = document.getElementById('toast');
@@ -1242,6 +1335,7 @@ function showToast(msg, type='success'){
 }
 
 // === EXPONER FUNCIONES GLOBALES (requerido por type="module") ===
+window.switchAdminTab = switchAdminTab;
 window.showView = showView;
 window.setAuthMode = setAuthMode;
 window.switchAuthTab = switchAuthTab;
