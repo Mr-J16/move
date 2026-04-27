@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UberSUV Chile</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --gold:#C9A84C;
+  --gold-light:#E8D18A;
+  --gold-dark:#8B6914;
+  --dark:#0D0D0D;
+  --dark2:#161616;
+  --dark3:#1E1E1E;
+  --dark4:#2A2A2A;
+  --text:#F5F0E8;
+  --text2:#B8B0A0;
+  --text3:#786E5E;
+  --border:rgba(201,168,76,0.15);
+  --border2:rgba(201,168,76,0.3);
+  --success:#2D7A4F;
+  --success-bg:rgba(45,122,79,0.15);
+  --red:#C0392B;
+  --red-bg:rgba(192,57,43,0.12);
+}
+body{font-family:'DM Sans',sans-serif;background:var(--dark);color:var(--text);min-height:100vh;overflow-x:hidden}
+h1,h2,h3,.serif{font-family:'Playfair Display',serif}
+
+/* NAV */
+nav{background:rgba(13,13,13,0.95);border-bottom:1px solid var(--border);padding:0 2rem;display:flex;align-items:center;justify-content:space-between;height:64px;position:sticky;top:0;z-index:100;backdrop-filter:blur(20px)}
+.logo{display:flex;align-items:center;gap:10px}
+.logo-icon{width:36px;height:36px;background:linear-gradient(135deg,var(--gold),var(--gold-dark));border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px}
+.logo-text{font-family:'Playfair Display',serif;font-size:1.2rem;font-weight:600;color:var(--text)}
+.logo-text span{color:var(--gold)}
+.nav-btns{display:flex;gap:8px}
+.nav-btn{padding:8px 18px;border-radius:6px;font-size:13px;font-weight:500;cursor:pointer;transition:all .2s;border:none;font-family:'DM Sans',sans-serif}
+.nav-btn.outline{background:transparent;color:var(--text2);border:1px solid var(--border2)}
+.nav-btn.outline:hover{background:var(--dark3);color:var(--text)}
+.nav-btn.gold{background:linear-gradient(135deg,var(--gold),var(--gold-dark));color:#000;font-weight:600}
+.nav-btn.gold:hover{opacity:.9;transform:translateY(-1px)}
+
+/* VIEWS */
+.view{display:none;min-height:calc(100vh - 64px)}
+.view.active{display:block}
+
+/* HERO */
+.hero{background:linear-gradient(160deg,var(--dark) 0%,#1A1508 60%,var(--dark2) 100%);padding:5rem 2rem 4rem;text-align:center;position:relative;overflow:hidden}
+.hero::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 80% 60% at 50% 0%,rgba(201,168,76,0.08),transparent);pointer-events:none}
+.hero-tag{display:inline-flex;align-items:center;gap:8px;background:rgba(201,168,76,0.1);border:1px solid var(--border2);border-radius:20px;padding:6px 16px;font-size:12px;color:var(--gold);font-weight:500;letter-spacing:.05em;text-transform:uppercase;margin-bottom:1.5rem}
+.hero h1{font-size:clamp(2.2rem,5vw,3.8rem);line-height:1.15;margin-bottom:1rem;color:var(--text)}
+.hero h1 em{color:var(--gold);font-style:normal}
+.hero p{font-size:1.1rem;color:var(--text2);max-width:520px;margin:0 auto 2.5rem;line-height:1.7}
+.hero-actions{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+.btn-primary{background:linear-gradient(135deg,var(--gold),var(--gold-dark));color:#000;font-weight:600;font-size:15px;padding:14px 32px;border-radius:8px;border:none;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .2s;letter-spacing:.02em}
+.btn-primary:hover{opacity:.9;transform:translateY(-2px)}
+.btn-secondary{background:transparent;color:var(--text);font-weight:500;font-size:15px;padding:14px 32px;border-radius:8px;border:1px solid var(--border2);cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .2s}
+.btn-secondary:hover{background:var(--dark3)}
+.hero-stats{display:flex;justify-content:center;gap:3rem;margin-top:3rem;padding-top:2.5rem;border-top:1px solid var(--border)}
+.stat-item{text-align:center}
+.stat-num{font-family:'Playfair Display',serif;font-size:1.8rem;color:var(--gold);font-weight:600}
+.stat-label{font-size:12px;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-top:4px}
+
+/* FEATURES */
+.features{padding:4rem 2rem;background:var(--dark2)}
+.features-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1px;max-width:900px;margin:0 auto;background:var(--border)}
+.feature-card{background:var(--dark2);padding:2rem 1.5rem;text-align:center}
+.feature-icon{font-size:28px;margin-bottom:1rem;display:block}
+.feature-title{font-size:14px;font-weight:600;color:var(--text);margin-bottom:.5rem}
+.feature-desc{font-size:13px;color:var(--text3);line-height:1.6}
+
+/* BOOKING FORM */
+.booking-view{padding:2rem;max-width:680px;margin:0 auto}
+.section-header{margin-bottom:2rem;padding-bottom:1rem;border-bottom:1px solid var(--border)}
+.section-header h2{font-size:1.6rem;color:var(--text)}
+.section-header p{font-size:14px;color:var(--text2);margin-top:.5rem}
+.form-card{background:var(--dark2);border:1px solid var(--border);border-radius:12px;padding:1.5rem;margin-bottom:1rem}
+.form-card-title{font-size:12px;text-transform:uppercase;letter-spacing:.1em;color:var(--gold);font-weight:600;margin-bottom:1.2rem;display:flex;align-items:center;gap:8px}
+.form-card-title::before{content:'';display:block;width:3px;height:14px;background:var(--gold);border-radius:2px}
+.field{margin-bottom:1rem}
+.field label{display:block;font-size:13px;color:var(--text2);margin-bottom:.4rem;font-weight:500}
+.field input,.field select{width:100%;background:var(--dark3);border:1px solid var(--border);border-radius:8px;padding:11px 14px;color:var(--text);font-size:14px;font-family:'DM Sans',sans-serif;outline:none;transition:border .2s}
+.field input:focus,.field select:focus{border-color:var(--gold)}
+.field input::placeholder{color:var(--text3)}
+.field select option{background:var(--dark3)}
+.field-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.stops-list{display:flex;flex-direction:column;gap:8px}
+.stop-item{display:flex;gap:8px;align-items:center}
+.stop-item input{flex:1;background:var(--dark3);border:1px solid var(--border);border-radius:8px;padding:10px 14px;color:var(--text);font-size:13px;font-family:'DM Sans',sans-serif;outline:none;transition:border .2s}
+.stop-item input:focus{border-color:var(--gold)}
+.stop-item input::placeholder{color:var(--text3)}
+.btn-icon{background:transparent;border:1px solid var(--border);border-radius:6px;width:34px;height:34px;color:var(--text3);cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;transition:all .2s;flex-shrink:0}
+.btn-icon:hover{border-color:var(--gold);color:var(--gold)}
+.btn-add-stop{display:flex;align-items:center;gap:8px;background:transparent;border:1px dashed var(--border);border-radius:8px;padding:10px 14px;color:var(--text3);cursor:pointer;font-size:13px;font-family:'DM Sans',sans-serif;width:100%;transition:all .2s;margin-top:8px}
+.btn-add-stop:hover{border-color:var(--gold);color:var(--gold)}
+.trip-types{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+.trip-type{background:var(--dark3);border:1px solid var(--border);border-radius:8px;padding:1rem;cursor:pointer;transition:all .2s;text-align:center}
+.trip-type:hover{border-color:var(--border2)}
+.trip-type.selected{border-color:var(--gold);background:rgba(201,168,76,0.08)}
+.trip-type-icon{font-size:24px;display:block;margin-bottom:.5rem}
+.trip-type-name{font-size:13px;font-weight:600;color:var(--text);display:block}
+.trip-type-desc{font-size:11px;color:var(--text3);margin-top:3px;display:block}
+
+/* PRICE CARD */
+.price-card{background:linear-gradient(135deg,rgba(201,168,76,0.1),rgba(201,168,76,0.03));border:1px solid var(--border2);border-radius:12px;padding:1.5rem;margin:1rem 0}
+.price-row{display:flex;justify-content:space-between;align-items:center;padding:.6rem 0;border-bottom:1px solid var(--border)}
+.price-row:last-of-type{border-bottom:none}
+.price-label{font-size:13px;color:var(--text2)}
+.price-value{font-size:13px;color:var(--text);font-weight:500}
+.price-total-row{display:flex;justify-content:space-between;align-items:center;padding-top:1rem;margin-top:.5rem;border-top:1px solid var(--border2)}
+.price-total-label{font-family:'Playfair Display',serif;font-size:1rem;color:var(--text)}
+.price-total-value{font-family:'Playfair Display',serif;font-size:1.8rem;font-weight:600;color:var(--gold)}
+.price-note{font-size:11px;color:var(--text3);margin-top:.8rem;line-height:1.5}
+.btn-book{width:100%;background:linear-gradient(135deg,var(--gold),var(--gold-dark));color:#000;font-weight:700;font-size:15px;padding:16px;border-radius:8px;border:none;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .2s;letter-spacing:.02em;margin-top:.5rem}
+.btn-book:hover{opacity:.9;transform:translateY(-1px)}
+.btn-book:disabled{opacity:.5;cursor:not-allowed;transform:none}
+
+/* REGISTER / LOGIN */
+.auth-view{display:flex;align-items:center;justify-content:center;min-height:calc(100vh - 64px);padding:2rem;background:var(--dark)}
+.auth-card{background:var(--dark2);border:1px solid var(--border);border-radius:16px;padding:2.5rem;width:100%;max-width:440px}
+.auth-title{font-size:1.8rem;margin-bottom:.5rem;color:var(--text)}
+.auth-sub{font-size:14px;color:var(--text2);margin-bottom:2rem}
+.auth-tabs{display:flex;gap:4px;background:var(--dark3);border-radius:8px;padding:4px;margin-bottom:1.5rem}
+.auth-tab{flex:1;padding:8px;border-radius:6px;font-size:13px;font-weight:500;border:none;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .2s;background:transparent;color:var(--text2)}
+.auth-tab.active{background:var(--dark2);color:var(--text);box-shadow:0 1px 3px rgba(0,0,0,.3)}
+.auth-divider{display:flex;align-items:center;gap:12px;margin:1.2rem 0;font-size:12px;color:var(--text3)}
+.auth-divider::before,.auth-divider::after{content:'';flex:1;height:1px;background:var(--border)}
+.auth-link{font-size:13px;color:var(--text2);text-align:center;margin-top:1rem}
+.auth-link span{color:var(--gold);cursor:pointer}
+
+/* TOAST */
+.toast{position:fixed;bottom:2rem;right:2rem;background:var(--dark3);border:1px solid var(--border2);border-radius:10px;padding:14px 20px;color:var(--text);font-size:14px;z-index:999;transform:translateY(100px);opacity:0;transition:all .3s;max-width:320px;box-shadow:0 8px 32px rgba(0,0,0,.5)}
+.toast.show{transform:translateY(0);opacity:1}
+.toast.success{border-color:rgba(45,122,79,.4);background:rgba(45,122,79,.15)}
+.toast.error{border-color:rgba(192,57,43,.4);background:rgba(192,57,43,.12)}
+
+/* ADMIN */
+.admin-view{padding:2rem;max-width:900px;margin:0 auto}
+.admin-header{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:2rem;padding-bottom:1rem;border-bottom:1px solid var(--border)}
+.admin-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:2rem}
+.admin-stat{background:var(--dark2);border:1px solid var(--border);border-radius:10px;padding:1.2rem}
+.admin-stat-label{font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.5rem}
+.admin-stat-value{font-family:'Playfair Display',serif;font-size:1.6rem;color:var(--gold)}
+.admin-stat-value.text{font-size:1.1rem;font-family:'DM Sans',sans-serif;color:var(--text);font-weight:600}
+.admin-table-wrap{background:var(--dark2);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+.admin-table-header{padding:1rem 1.5rem;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border)}
+.admin-table-header h3{font-size:14px;font-weight:600;color:var(--text)}
+.badge{display:inline-flex;align-items:center;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600}
+.badge.pending{background:rgba(201,168,76,.15);color:var(--gold-light)}
+.badge.confirmed{background:var(--success-bg);color:#5DD68A}
+.badge.cancelled{background:var(--red-bg);color:#E07070}
+table{width:100%;border-collapse:collapse}
+th{padding:.8rem 1rem;text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);font-weight:600;border-bottom:1px solid var(--border);background:rgba(255,255,255,.02)}
+td{padding:.9rem 1rem;font-size:13px;color:var(--text2);border-bottom:1px solid var(--border);vertical-align:top}
+td:first-child{color:var(--text);font-weight:500}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:rgba(201,168,76,.03)}
+.td-contact{line-height:1.6}
+.td-contact small{display:block;color:var(--text3);font-size:11px}
+.empty-state{padding:3rem;text-align:center;color:var(--text3)}
+.empty-state p{margin-top:.5rem;font-size:13px}
+
+/* CONFIRMATION */
+.confirm-view{display:flex;align-items:center;justify-content:center;min-height:calc(100vh - 64px);padding:2rem}
+.confirm-card{background:var(--dark2);border:1px solid var(--border2);border-radius:16px;padding:2.5rem;max-width:460px;width:100%;text-align:center}
+.confirm-icon{width:72px;height:72px;background:linear-gradient(135deg,var(--gold),var(--gold-dark));border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:32px;margin:0 auto 1.5rem}
+.confirm-id{font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.1em;margin-bottom:.3rem}
+.confirm-num{font-family:'Playfair Display',serif;font-size:2rem;color:var(--gold);margin-bottom:.5rem}
+.confirm-desc{font-size:14px;color:var(--text2);line-height:1.6;margin-bottom:1.5rem}
+.confirm-details{background:var(--dark3);border-radius:10px;padding:1.2rem;text-align:left;margin-bottom:1.5rem}
+.confirm-detail-row{display:flex;justify-content:space-between;font-size:13px;padding:.4rem 0}
+.confirm-detail-row span:first-child{color:var(--text3)}
+.confirm-detail-row span:last-child{color:var(--text);font-weight:500}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="logo">
+    <div class="logo-icon">🚗</div>
+    <div class="logo-text">Move<span>Elite</span></div>
+  </div>
+  <div class="nav-btns" id="navBtns">
+    <button class="nav-btn outline" onclick="showView('auth')">Iniciar sesión</button>
+    <button class="nav-btn gold" onclick="showView('auth')">Registrarse</button>
+  </div>
+</nav>
+
+<!-- HERO VIEW -->
+<div id="view-home" class="view active">
+  <div class="hero">
+    <div class="hero-tag">🇨🇱 Disponible en Chile</div>
+    <h1>Viajes <em>premium</em><br>en tu ciudad</h1>
+    <p>Reserva tu traslado en SUV ejecutiva con precio transparente y conductor profesional. Sin sorpresas, sin esperas.</p>
+    <div class="hero-actions">
+      <button class="btn-primary" onclick="showView('auth');setAuthMode('register')">Reservar ahora</button>
+      <button class="btn-secondary" onclick="showView('home');scrollToFeatures()">Cómo funciona</button>
+    </div>
+    <div class="hero-stats">
+      <div class="stat-item"><div class="stat-num">4.9★</div><div class="stat-label">Valoración media</div></div>
+      <div class="stat-item"><div class="stat-num">SUV</div><div class="stat-label">Changan CS15</div></div>
+      <div class="stat-item"><div class="stat-num">24/7</div><div class="stat-label">Disponibilidad</div></div>
+    </div>
+  </div>
+  <div class="features" id="features">
+    <div class="features-grid">
+      <div class="feature-card"><span class="feature-icon">💎</span><div class="feature-title">Clase ejecutiva</div><div class="feature-desc">SUV premium con climatización, WiFi y asientos premium</div></div>
+      <div class="feature-card"><span class="feature-icon">📍</span><div class="feature-title">Paradas múltiples</div><div class="feature-desc">Agrega puntos intermedios sin cargo adicional</div></div>
+      <div class="feature-card"><span class="feature-icon">💰</span><div class="feature-title">Precio fijo</div><div class="feature-desc">Tarifa confirmada antes del viaje, sin cargos dinámicos</div></div>
+      <div class="feature-card"><span class="feature-icon">🔒</span><div class="feature-title">100% seguro</div><div class="feature-desc">Conductor verificado y ruta monitorizada en tiempo real</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- AUTH VIEW -->
+<div id="view-auth" class="view">
+  <div class="auth-view">
+    <div class="auth-card">
+      <h2 class="auth-title serif">Bienvenido</h2>
+      <p class="auth-sub">Accede a viajes ejecutivos en Chile</p>
+      <div class="auth-tabs">
+        <button class="auth-tab active" id="tabLogin" onclick="switchAuthTab('login')">Iniciar sesión</button>
+        <button class="auth-tab" id="tabRegister" onclick="switchAuthTab('register')">Registrarse</button>
+      </div>
+      <div id="formLogin">
+        <div class="field"><label>Correo electrónico</label><input type="email" id="loginEmail" placeholder="tucorreo@email.com"></div>
+        <div class="field"><label>Contraseña</label><input type="password" id="loginPass" placeholder="••••••••"></div>
+        <button class="btn-primary" style="width:100%;margin-top:.5rem" onclick="doLogin()">Ingresar</button>
+        <div class="auth-divider">o</div>
+        <p class="auth-link">¿No tienes cuenta? <span onclick="switchAuthTab('register')">Regístrate gratis</span></p>
+      </div>
+      <div id="formRegister" style="display:none">
+        <div class="field-row">
+          <div class="field"><label>Nombre</label><input type="text" id="regName" placeholder="Tu nombre"></div>
+          <div class="field"><label>Apellido</label><input type="text" id="regLastname" placeholder="Tu apellido"></div>
+        </div>
+        <div class="field"><label>Correo electrónico</label><input type="email" id="regEmail" placeholder="tucorreo@email.com"></div>
+        <div class="field"><label>Teléfono</label><input type="tel" id="regPhone" placeholder="+56 9 XXXX XXXX"></div>
+        <div class="field"><label>RUT (opcional)</label><input type="text" id="regRut" placeholder="12.345.678-9"></div>
+        <div class="field"><label>Contraseña</label><input type="password" id="regPass" placeholder="Mínimo 6 caracteres"></div>
+        <button class="btn-primary" style="width:100%;margin-top:.5rem" onclick="doRegister()">Crear cuenta</button>
+        <p class="auth-link" style="margin-top:1rem">¿Ya tienes cuenta? <span onclick="switchAuthTab('login')">Inicia sesión</span></p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- BOOKING VIEW -->
+<div id="view-booking" class="view">
+  <div class="booking-view">
+    <div class="section-header">
+      <h2>Reservar viaje</h2>
+      <p>Completa los datos de tu traslado para obtener tu tarifa</p>
+    </div>
+    <!-- Origen / Destino -->
+    <div class="form-card">
+      <div class="form-card-title">Ruta</div>
+      <div class="field"><label>📍 Comuna de origen</label>
+        <select id="origin" onchange="calcPrice()">
+          <option value="">Selecciona tu origen...</option>
+        </select>
+      </div>
+      <div class="stops-list" id="stopsList"></div>
+      <button class="btn-add-stop" onclick="addStop()">＋ Agregar parada intermedia</button>
+      <div class="field" style="margin-top:1rem"><label>🏁 Comuna de destino</label>
+        <select id="destination" onchange="calcPrice()">
+          <option value="">Selecciona tu destino...</option>
+        </select>
+      </div>
+    </div>
+    <!-- Tipo de viaje -->
+    <div class="form-card">
+      <div class="form-card-title">Tipo de viaje</div>
+      <div class="trip-types" id="tripTypes"></div>
+    </div>
+    <!-- Horario -->
+    <div class="form-card">
+      <div class="form-card-title">Horario</div>
+      <div class="field-row">
+        <div class="field"><label>📅 Fecha</label><input type="date" id="tripDate"></div>
+        <div class="field"><label>🕐 Hora</label><input type="time" id="tripTime"></div>
+      </div>
+      <div class="field"><label>👥 Pasajeros</label>
+        <select id="passengers">
+          <option value="1">1 pasajero</option>
+          <option value="2">2 pasajeros</option>
+          <option value="3">3 pasajeros</option>
+          <option value="4">4 pasajeros</option>
+          <option value="5">5 pasajeros</option>
+        </select>
+      </div>
+      <div class="field"><label>📝 Notas al conductor (opcional)</label>
+        <input type="text" id="tripNotes" placeholder="Ej: Llevar equipaje, niño pequeño...">
+      </div>
+    </div>
+    <!-- Precio -->
+    <div class="price-card" id="priceCard" style="display:none">
+      <div class="price-row"><span class="price-label">Distancia estimada</span><span class="price-value" id="pdist">—</span></div>
+      <div class="price-row"><span class="price-label">Combustible (9.5 L/km)</span><span class="price-value" id="pfuel">—</span></div>
+      <div class="price-row"><span class="price-label">Tarifa base + servicio</span><span class="price-value" id="pbase">—</span></div>
+      <div class="price-row" id="psurgeRow" style="display:none"><span class="price-label" id="psurgeLabel">Recargo horario</span><span class="price-value" id="psurge">—</span></div>
+      <div class="price-total-row">
+        <span class="price-total-label">Total estimado</span>
+        <span class="price-total-value" id="ptotal">—</span>
+      </div>
+      <p class="price-note">* Precio referencial en pesos chilenos. Tarifa competitiva con Uber/DiDi para SUV ejecutiva. Gasolina a $1.100/L aprox. El precio puede variar según tráfico.</p>
+    </div>
+    <button class="btn-book" id="btnBook" onclick="confirmBooking()" disabled>Confirmar reserva</button>
+  </div>
+</div>
+
+<!-- CONFIRMATION VIEW -->
+<div id="view-confirm" class="view">
+  <div class="confirm-view">
+    <div class="confirm-card">
+      <div class="confirm-icon">✓</div>
+      <div class="confirm-id">Reserva confirmada</div>
+      <div class="confirm-num" id="confirmNum">#MV-0001</div>
+      <p class="confirm-desc">Tu viaje ha sido reservado exitosamente. Te contactaremos al número registrado para confirmar el conductor asignado.</p>
+      <div class="confirm-details" id="confirmDetails"></div>
+      <button class="btn-primary" style="width:100%" onclick="showView('booking')">Hacer otra reserva</button>
+    </div>
+  </div>
+</div>
+
+<!-- ADMIN VIEW -->
+<div id="view-admin" class="view">
+  <div class="admin-view">
+    <div class="admin-header">
+      <div>
+        <h2 style="font-size:1.5rem">Panel de administración</h2>
+        <p style="font-size:13px;color:var(--text2);margin-top:.3rem">MoveElite — Gestión de reservas</p>
+      </div>
+      <button class="nav-btn outline" onclick="doLogout()">Cerrar sesión</button>
+    </div>
+    <div class="admin-stats" id="adminStats"></div>
+    <div class="admin-table-wrap">
+      <div class="admin-table-header">
+        <h3>Reservas registradas</h3>
+        <span class="badge pending" id="totalBadge">0 reservas</span>
+      </div>
+      <div id="adminTableBody"></div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const COMUNAS = [
+  {name:"Santiago Centro",dist:0},{name:"Providencia",dist:5},{name:"Las Condes",dist:12},
+  {name:"Vitacura",dist:14},{name:"Lo Barnechea",dist:20},{name:"La Reina",dist:15},
+  {name:"Ñuñoa",dist:8},{name:"Macul",dist:10},{name:"Peñalolén",dist:14},
+  {name:"San Miguel",dist:7},{name:"La Florida",dist:16},{name:"Puente Alto",dist:24},
+  {name:"La Pintana",dist:20},{name:"Maipú",dist:18},{name:"Cerrillos",dist:14},
+  {name:"Estación Central",dist:6},{name:"Quinta Normal",dist:6},{name:"Independencia",dist:5},
+  {name:"Recoleta",dist:5},{name:"Quilicura",dist:16},{name:"Huechuraba",dist:14},
+  {name:"Conchalí",dist:9},{name:"Renca",dist:12},{name:"Pudahuel",dist:16},
+  {name:"Cerro Navia",dist:13},{name:"Lo Espejo",dist:12},{name:"Pedro Aguirre Cerda",dist:9},
+  {name:"San Joaquín",dist:9},{name:"La Cisterna",dist:11},{name:"El Bosque",dist:14},
+  {name:"San Ramón",dist:15},{name:"Lo Prado",dist:11},{name:"Colina",dist:32},
+  {name:"Lampa",dist:28},{name:"Til Til",dist:52},{name:"Buin",dist:42},
+  {name:"Paine",dist:50},{name:"Melipilla",dist:65},{name:"Talagante",dist:35},
+  {name:"Peñaflor",dist:38},{name:"Isla de Maipo",dist:45},{name:"Padre Hurtado",dist:22},
+  {name:"Aeropuerto SCL",dist:25}
+];
+
+const TRIP_TYPES = [
+  {id:'ejecutivo',icon:'👔',name:'Ejecutivo',desc:'Traslado corporativo',mult:1},
+  {id:'aeropuerto',icon:'✈️',name:'Aeropuerto',desc:'SCL · llegadas y salidas',mult:1.15},
+  {id:'evento',icon:'🎉',name:'Evento',desc:'Matrimonios, graduaciones',mult:1.1},
+  {id:'nocturno',icon:'🌙',name:'Nocturno',desc:'22:00 – 06:00 hrs',mult:1.2},
+];
+
+let state = {
+  user: null,
+  adminPass: 'admin123',
+  bookings: JSON.parse(localStorage.getItem('me_bookings')||'[]'),
+  users: JSON.parse(localStorage.getItem('me_users')||'[]'),
+  stops: [],
+  selectedTripType: 'ejecutivo',
+  currentPrice: 0,
+  bookingCount: parseInt(localStorage.getItem('me_count')||'0')
+};
+
+const FUEL_PRICE = 1100;
+const FUEL_CONSUMPTION = 9.5;
+
+function saveData(){
+  localStorage.setItem('me_bookings', JSON.stringify(state.bookings));
+  localStorage.setItem('me_users', JSON.stringify(state.users));
+  localStorage.setItem('me_count', state.bookingCount.toString());
+}
+
+function initSelects(){
+  ['origin','destination'].forEach(id=>{
+    const sel = document.getElementById(id);
+    const first = sel.options[0];
+    sel.innerHTML = '';
+    sel.appendChild(first);
+    COMUNAS.forEach(c=>{
+      const opt = document.createElement('option');
+      opt.value = c.name;
+      opt.textContent = c.name;
+      sel.appendChild(opt);
+    });
+  });
+}
+
+function initTripTypes(){
+  const container = document.getElementById('tripTypes');
+  container.innerHTML = '';
+  TRIP_TYPES.forEach(t=>{
+    const div = document.createElement('div');
+    div.className = 'trip-type' + (t.id===state.selectedTripType?' selected':'');
+    div.innerHTML = `<span class="trip-type-icon">${t.icon}</span><span class="trip-type-name">${t.name}</span><span class="trip-type-desc">${t.desc}</span>`;
+    div.onclick = ()=>{ state.selectedTripType = t.id; initTripTypes(); calcPrice(); };
+    container.appendChild(div);
+  });
+}
+
+function addStop(){
+  const id = Date.now();
+  state.stops.push({id, value:''});
+  renderStops();
+}
+
+function removeStop(id){
+  state.stops = state.stops.filter(s=>s.id!==id);
+  renderStops();
+  calcPrice();
+}
+
+function renderStops(){
+  const list = document.getElementById('stopsList');
+  list.innerHTML = '';
+  state.stops.forEach((s,i)=>{
+    const div = document.createElement('div');
+    div.className = 'stop-item';
+    div.innerHTML = `<input type="text" placeholder="Parada ${i+1} — ej: Mall Plaza Vespucio" value="${s.value}" oninput="updateStop(${s.id},this.value)"><button class="btn-icon" onclick="removeStop(${s.id})">✕</button>`;
+    list.appendChild(div);
+  });
+}
+
+function updateStop(id, value){
+  const s = state.stops.find(x=>x.id===id);
+  if(s) s.value = value;
+}
+
+function getDist(name){ return (COMUNAS.find(c=>c.name===name)||{dist:10}).dist; }
+
+function calcPrice(){
+  const orig = document.getElementById('origin').value;
+  const dest = document.getElementById('destination').value;
+  const card = document.getElementById('priceCard');
+  const btn = document.getElementById('btnBook');
+  if(!orig||!dest){ card.style.display='none'; btn.disabled=true; return; }
+  const origDist = getDist(orig);
+  const destDist = getDist(dest);
+  let km = Math.abs(destDist - origDist) + Math.max(origDist, destDist)*0.3;
+  km = Math.max(km, 3);
+  state.stops.forEach(()=>{ km += 3; });
+  const tripMult = TRIP_TYPES.find(t=>t.id===state.selectedTripType)?.mult||1;
+  const fuelCost = (km/100)*FUEL_CONSUMPTION*FUEL_PRICE;
+  const baseFare = 1500 + km*320;
+  const surgeBase = tripMult > 1 ? baseFare*(tripMult-1) : 0;
+  const total = Math.round((fuelCost + baseFare + surgeBase)/100)*100;
+  state.currentPrice = total;
+  card.style.display='block';
+  document.getElementById('pdist').textContent = km.toFixed(1)+' km est.';
+  document.getElementById('pfuel').textContent = '$'+Math.round(fuelCost).toLocaleString('es-CL');
+  document.getElementById('pbase').textContent = '$'+Math.round(baseFare).toLocaleString('es-CL');
+  const surgeRow = document.getElementById('psurgeRow');
+  if(surgeBase>0){
+    surgeRow.style.display='flex';
+    const tt = TRIP_TYPES.find(t=>t.id===state.selectedTripType);
+    document.getElementById('psurgeLabel').textContent = 'Recargo '+tt.name;
+    document.getElementById('psurge').textContent = '+$'+Math.round(surgeBase).toLocaleString('es-CL');
+  } else surgeRow.style.display='none';
+  document.getElementById('ptotal').textContent = '$'+total.toLocaleString('es-CL');
+  btn.disabled = false;
+}
+
+function confirmBooking(){
+  const orig = document.getElementById('origin').value;
+  const dest = document.getElementById('destination').value;
+  const date = document.getElementById('tripDate').value;
+  const time = document.getElementById('tripTime').value;
+  const pax = document.getElementById('passengers').value;
+  const notes = document.getElementById('tripNotes').value;
+  if(!orig||!dest||!date||!time){ showToast('Completa todos los campos requeridos','error'); return; }
+  state.bookingCount++;
+  const id = '#MV-'+String(state.bookingCount).padStart(4,'0');
+  const booking = {
+    id, orig, dest,
+    stops: state.stops.filter(s=>s.value).map(s=>s.value),
+    date, time, pax,
+    notes, price: state.currentPrice,
+    tripType: state.selectedTripType,
+    user: state.user.name+' '+state.user.lastname,
+    phone: state.user.phone,
+    email: state.user.email,
+    createdAt: new Date().toLocaleString('es-CL'),
+    status: 'confirmed'
+  };
+  state.bookings.push(booking);
+  saveData();
+  document.getElementById('confirmNum').textContent = id;
+  document.getElementById('confirmDetails').innerHTML = `
+    <div class="confirm-detail-row"><span>Origen</span><span>${orig}</span></div>
+    ${booking.stops.length?`<div class="confirm-detail-row"><span>Paradas</span><span>${booking.stops.join(', ')}</span></div>`:''}
+    <div class="confirm-detail-row"><span>Destino</span><span>${dest}</span></div>
+    <div class="confirm-detail-row"><span>Fecha y hora</span><span>${date} ${time}</span></div>
+    <div class="confirm-detail-row"><span>Pasajeros</span><span>${pax}</span></div>
+    <div class="confirm-detail-row"><span>Precio</span><span>$${state.currentPrice.toLocaleString('es-CL')}</span></div>
+  `;
+  showView('confirm');
+}
+
+function showView(v){
+  document.querySelectorAll('.view').forEach(x=>x.classList.remove('active'));
+  document.getElementById('view-'+v).classList.add('active');
+  if(v==='admin') renderAdmin();
+  if(v==='booking'){ calcPrice(); setTodayDate(); }
+}
+
+function setTodayDate(){
+  const now = new Date();
+  document.getElementById('tripDate').value = now.toISOString().split('T')[0];
+  document.getElementById('tripTime').value = now.toTimeString().slice(0,5);
+}
+
+function renderAdmin(){
+  const bookings = state.bookings;
+  const users = state.users;
+  const totalRev = bookings.reduce((a,b)=>a+b.price,0);
+  document.getElementById('adminStats').innerHTML = `
+    <div class="admin-stat"><div class="admin-stat-label">Total reservas</div><div class="admin-stat-value">${bookings.length}</div></div>
+    <div class="admin-stat"><div class="admin-stat-label">Ingresos totales</div><div class="admin-stat-value">$${totalRev.toLocaleString('es-CL')}</div></div>
+    <div class="admin-stat"><div class="admin-stat-label">Usuarios registrados</div><div class="admin-stat-value">${users.length}</div></div>
+    <div class="admin-stat"><div class="admin-stat-label">Ticket promedio</div><div class="admin-stat-value">${bookings.length?'$'+(Math.round(totalRev/bookings.length)).toLocaleString('es-CL'):'—'}</div></div>
+  `;
+  document.getElementById('totalBadge').textContent = bookings.length+' reservas';
+  if(!bookings.length){
+    document.getElementById('adminTableBody').innerHTML = '<div class="empty-state"><p>No hay reservas registradas aún.</p></div>';
+    return;
+  }
+  const rows = [...bookings].reverse().map(b=>`
+    <tr>
+      <td>${b.id}<br><small style="color:var(--text3);font-size:11px">${b.createdAt}</small></td>
+      <td class="td-contact">${b.user}<small>${b.phone}</small><small>${b.email}</small></td>
+      <td>${b.orig}${b.stops.length?' → '+b.stops.join(' → '):''} → ${b.dest}</td>
+      <td>${b.date}<br><small>${b.time} · ${b.pax} pax</small></td>
+      <td style="color:var(--gold);font-weight:600">$${b.price.toLocaleString('es-CL')}</td>
+      <td><span class="badge confirmed">Confirmado</span></td>
+    </tr>
+  `).join('');
+  document.getElementById('adminTableBody').innerHTML = `
+    <table>
+      <thead><tr><th>ID / Fecha</th><th>Cliente</th><th>Ruta</th><th>Horario</th><th>Precio</th><th>Estado</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+}
+
+function switchAuthTab(tab){
+  document.getElementById('tabLogin').classList.toggle('active',tab==='login');
+  document.getElementById('tabRegister').classList.toggle('active',tab==='register');
+  document.getElementById('formLogin').style.display = tab==='login'?'block':'none';
+  document.getElementById('formRegister').style.display = tab==='register'?'block':'none';
+}
+
+function setAuthMode(mode){ switchAuthTab(mode); }
+
+function doRegister(){
+  const name = document.getElementById('regName').value.trim();
+  const lastname = document.getElementById('regLastname').value.trim();
+  const email = document.getElementById('regEmail').value.trim();
+  const phone = document.getElementById('regPhone').value.trim();
+  const rut = document.getElementById('regRut').value.trim();
+  const pass = document.getElementById('regPass').value;
+  if(!name||!email||!phone||!pass){ showToast('Completa los campos obligatorios','error'); return; }
+  if(state.users.find(u=>u.email===email)){ showToast('Este correo ya está registrado','error'); return; }
+  const user = {name,lastname,email,phone,rut,pass,registeredAt:new Date().toLocaleString('es-CL')};
+  state.users.push(user);
+  saveData();
+  loginUser(user);
+}
+
+function doLogin(){
+  const email = document.getElementById('loginEmail').value.trim();
+  const pass = document.getElementById('loginPass').value;
+  if(email==='admin@moveelite.cl'&&pass===state.adminPass){
+    state.user = {name:'Admin',lastname:'',email,isAdmin:true};
+    updateNav();
+    showView('admin');
+    showToast('Bienvenido, Admin 👑');
+    return;
+  }
+  const user = state.users.find(u=>u.email===email&&u.pass===pass);
+  if(!user){ showToast('Credenciales incorrectas','error'); return; }
+  loginUser(user);
+}
+
+function loginUser(user){
+  state.user = user;
+  updateNav();
+  showView('booking');
+  showToast('¡Bienvenido, '+user.name+'! 🚗');
+}
+
+function doLogout(){
+  state.user = null;
+  updateNav();
+  showView('home');
+  showToast('Sesión cerrada');
+}
+
+function updateNav(){
+  const btns = document.getElementById('navBtns');
+  if(!state.user){
+    btns.innerHTML = `<button class="nav-btn outline" onclick="showView('auth')">Iniciar sesión</button><button class="nav-btn gold" onclick="showView('auth')">Registrarse</button>`;
+  } else if(state.user.isAdmin){
+    btns.innerHTML = `<button class="nav-btn outline" onclick="showView('admin')">Panel Admin</button><button class="nav-btn outline" onclick="doLogout()">Salir</button>`;
+  } else {
+    btns.innerHTML = `<span style="font-size:13px;color:var(--text2);padding:0 12px">Hola, ${state.user.name}</span><button class="nav-btn gold" onclick="showView('booking')">Nueva reserva</button><button class="nav-btn outline" onclick="doLogout()">Salir</button>`;
+  }
+}
+
+function showToast(msg, type='success'){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast '+type+' show';
+  setTimeout(()=>t.classList.remove('show'),3000);
+}
+
+function scrollToFeatures(){ document.getElementById('features')?.scrollIntoView({behavior:'smooth'}); }
+
+initSelects();
+initTripTypes();
+setTodayDate();
+</script>
+</body>
+</html>
