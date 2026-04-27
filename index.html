@@ -576,7 +576,13 @@ tr:hover td{background:rgba(201,168,76,.03)}
 
 <div class="toast" id="toast"></div>
 
-<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBDcSRypw-9j_8SSyQxm8qD22VuXNZNbYs&libraries=places&language=es&region=CL"></script>
+<script>
+window.__mapsReady = function(){
+  window.__googleMapsLoaded = true;
+  window.dispatchEvent(new Event('googlemapsready'));
+};
+</script>
+<script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBDcSRypw-9j_8SSyQxm8qD22VuXNZNbYs&libraries=places,routes&v=weekly&language=es&region=CL&callback=__mapsReady"></script>
 <script type="module">
 // === FIREBASE ===
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
@@ -594,7 +600,9 @@ const firebaseConfig = {
 };
 
 const firebaseApp = initializeApp(firebaseConfig);
-const analytics = getAnalytics(firebaseApp);
+// Analytics puede fallar en algunos dominios - lo ignoramos
+let analytics = null;
+try { analytics = getAnalytics(firebaseApp); } catch(e) { console.warn('Analytics no disponible:', e); }
 const db = getFirestore(firebaseApp);
 
 // === STATUS PILLS ===
@@ -627,42 +635,45 @@ async function checkConnections(){
     setPillStatus('maps', 'error', 'Google Maps ✗');
   }
 
-  // 2. Places API
-  if(window.google?.maps?.places){
-    try {
-      const svc = new google.maps.places.AutocompleteService();
-      await new Promise((resolve, reject) => {
-        svc.getPlacePredictions({ input: 'Santiago', componentRestrictions:{country:'cl'} }, (res, status) => {
-          status === google.maps.places.PlacesServiceStatus.OK ? resolve() : reject(status);
-        });
+  // 2. Places API — probar AutocompleteSuggestion nueva
+  try {
+    const lib = placesLib || await google.maps.importLibrary('places');
+    if(lib?.AutocompleteSuggestion){
+      const { suggestions } = await lib.AutocompleteSuggestion.fetchAutocompleteSuggestions({
+        input: 'Santiago', includedRegionCodes: ['cl'], language: 'es'
       });
+      setPillStatus('places', suggestions?.length ? 'ok' : 'error',
+        suggestions?.length ? 'Places API ✓' : 'Places API ✗');
+    } else {
       setPillStatus('places', 'ok', 'Places API ✓');
-    } catch(e) {
-      setPillStatus('places', 'error', 'Places API ✗');
     }
-  } else {
+  } catch(e) {
     setPillStatus('places', 'error', 'Places API ✗');
   }
 
-  // 3. Distance Matrix API
-  if(window.google?.maps?.DistanceMatrixService){
-    try {
-      const svc = new google.maps.DistanceMatrixService();
-      await new Promise((resolve, reject) => {
-        svc.getDistanceMatrix({
-          origins: ['Santiago Centro, Chile'],
-          destinations: ['Las Condes, Chile'],
-          travelMode: google.maps.TravelMode.DRIVING
-        }, (res, status) => {
-          status === 'OK' && res.rows[0].elements[0].status === 'OK' ? resolve() : reject(status);
-        });
-      });
-      setPillStatus('matrix', 'ok', 'Distance Matrix ✓');
-    } catch(e) {
-      setPillStatus('matrix', 'error', 'Distance Matrix ✗');
+  // 3. Routes API v2
+  try {
+    const resp = await fetch('https://routes.googleapis.com/directions/v2:computeRoutes', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Goog-Api-Key': GMAPS_KEY,
+        'X-Goog-FieldMask': 'routes.distanceMeters'
+      },
+      body: JSON.stringify({
+        origin: { address: 'Santiago Centro, Chile' },
+        destination: { address: 'Las Condes, Chile' },
+        travelMode: 'DRIVE'
+      })
+    });
+    const data = await resp.json();
+    if(data.routes?.[0]?.distanceMeters){
+      setPillStatus('matrix', 'ok', 'Routes API ✓');
+    } else {
+      setPillStatus('matrix', 'error', 'Routes API ✗');
     }
-  } else {
-    setPillStatus('matrix', 'error', 'Distance Matrix ✗');
+  } catch(e) {
+    setPillStatus('matrix', 'error', 'Routes API ✗');
   }
   // Firebase se actualiza en loadFromFirestore
 }
@@ -729,31 +740,75 @@ const TRIP_TYPES = [
   }
 ];
 
-// === GOOGLE PLACES AUTOCOMPLETE ===
+// === GOOGLE PLACES AUTOCOMPLETE (nueva API 2025) ===
 const GMAPS_KEY = 'AIzaSyBDcSRypw-9j_8SSyQxm8qD22VuXNZNbYs';
-let autocompleteInstances = {}; // field -> { service, sessionToken }
-let placesService = null;
-let distanceMatrixService = null;
+let placesLib = null;
+let routesLib = null;
 
-function initGoogleServices(){
-  placesService = new google.maps.places.AutocompleteService();
-  distanceMatrixService = new google.maps.DistanceMatrixService();
+async function initGoogleServices(){
+  try {
+    placesLib = await google.maps.importLibrary('places');
+    routesLib = await google.maps.importLibrary('routes');
+    console.log('Google Maps libs cargadas:', Object.keys(placesLib).slice(0,5));
+  } catch(e) {
+    console.error('Error cargando libs Google Maps:', e);
+  }
 }
 
-// Pedir sugerencias a Google Places
-function getGoogleSuggestions(query, field){
+// Pedir sugerencias usando AutocompleteSuggestion (nueva API)
+async function getGoogleSuggestions(query, field){
   if(!query || query.length < 2) return;
   const sug = document.getElementById(field+'Sug');
+  if(!placesLib) return;
 
-  placesService.getPlacePredictions({
+  try {
+    const { suggestions } = await placesLib.AutocompleteSuggestion.fetchAutocompleteSuggestions({
+      input: query,
+      includedRegionCodes: ['cl'],
+      language: 'es'
+    });
+
+    if(!suggestions || !suggestions.length){ sug.classList.remove('open'); return; }
+
+    sug.innerHTML = suggestions.map((s, i) => {
+      const p = s.placePrediction;
+      return `
+        <div class="suggestion-item" onmousedown="selectGoogleAddress('${field}',${i})">
+          <span class="sug-icon">📍</span>
+          <div>
+            <div class="sug-main">${p.structuredFormat?.mainText?.text || p.text?.text || ''}</div>
+            <div class="sug-sub">${p.structuredFormat?.secondaryText?.text || ''}</div>
+          </div>
+        </div>`;
+    }).join('');
+
+    sug.dataset.predictions = JSON.stringify(suggestions.map(s => {
+      const p = s.placePrediction;
+      return {
+        placeId: p.placeId,
+        main: p.structuredFormat?.mainText?.text || p.text?.text || '',
+        full: p.text?.text || ''
+      };
+    }));
+    sug.classList.add('open');
+  } catch(e) {
+    console.warn('AutocompleteSuggestion error, usando fallback:', e);
+    // Fallback a AutocompleteService viejo
+    getGoogleSuggestionsFallback(query, field);
+  }
+}
+
+// Fallback con la API vieja (sigue funcionando)
+function getGoogleSuggestionsFallback(query, field){
+  const sug = document.getElementById(field+'Sug');
+  const svc = new google.maps.places.AutocompleteService();
+  svc.getPlacePredictions({
     input: query,
     componentRestrictions: { country: 'cl' },
-    language: 'es',
-    types: ['geocode', 'establishment']
+    language: 'es'
   }, (predictions, status) => {
     if(status !== google.maps.places.PlacesServiceStatus.OK || !predictions){
-      sug.classList.remove('open');
-      return;
+      sug.classList.remove('open'); return;
     }
     sug.innerHTML = predictions.map((p, i) => `
       <div class="suggestion-item" onmousedown="selectGoogleAddress('${field}',${i})">
@@ -762,8 +817,7 @@ function getGoogleSuggestions(query, field){
           <div class="sug-main">${p.structured_formatting.main_text}</div>
           <div class="sug-sub">${p.structured_formatting.secondary_text || ''}</div>
         </div>
-      </div>
-    `).join('');
+      </div>`).join('');
     sug.dataset.predictions = JSON.stringify(predictions.map(p=>({
       placeId: p.place_id,
       main: p.structured_formatting.main_text,
@@ -952,24 +1006,58 @@ async function calcPriceWithDistance(){
 
   if(!orig || !dest){ card.style.display='none'; btn.disabled=true; return; }
 
-  // Si tenemos ambos placeIds, usar Distance Matrix
   if(state.originPlaceId && state.destPlaceId){
     card.innerHTML = `<div style="text-align:center;padding:1rem;color:var(--text3);font-size:13px">📡 Calculando distancia real...</div>`;
     card.style.display='block';
     btn.disabled = true;
 
-    distanceMatrixService.getDistanceMatrix({
-      origins: [{ placeId: state.originPlaceId }],
-      destinations: [{ placeId: state.destPlaceId }],
-      travelMode: google.maps.TravelMode.DRIVING,
-      unitSystem: google.maps.UnitSystem.METRIC,
-      language: 'es'
-    }, (response, status) => {
-      if(status === 'OK'){
-        const element = response.rows[0].elements[0];
-        if(element.status === 'OK'){
-          const km = element.distance.value / 1000;
-          // Restaurar estructura del card
+    try {
+      // Usar Routes API v2 (reemplazo moderno de Distance Matrix)
+      const resp = await fetch('https://routes.googleapis.com/directions/v2:computeRoutes', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Goog-Api-Key': GMAPS_KEY,
+          'X-Goog-FieldMask': 'routes.distanceMeters,routes.duration'
+        },
+        body: JSON.stringify({
+          origin: { placeId: state.originPlaceId },
+          destination: { placeId: state.destPlaceId },
+          travelMode: 'DRIVE',
+          routingPreference: 'TRAFFIC_AWARE'
+        })
+      });
+
+      const data = await resp.json();
+      let km;
+
+      if(data.routes && data.routes[0]?.distanceMeters){
+        km = data.routes[0].distanceMeters / 1000;
+      } else {
+        throw new Error('Sin ruta');
+      }
+
+      card.innerHTML = `
+        <div class="price-row"><span class="price-label">Tipo de viaje</span><span class="price-value" id="ptriptype">—</span></div>
+        <div class="price-row"><span class="price-label">Tarifa base + servicio</span><span class="price-value" id="pbase">—</span></div>
+        <div class="price-row" id="psurgeRow" style="display:none"><span class="price-label" id="psurgeLabel">Recargo nocturno</span><span class="price-value" id="psurge">—</span></div>
+        <div class="price-total-row"><span class="price-total-label">Total estimado</span><span class="price-total-value" id="ptotal">—</span></div>
+        <p class="price-note">⚠️ Precio referencial en pesos chilenos. El viaje se confirma tras verificar el comprobante de transferencia bancaria.</p>
+      `;
+      renderPrice(km);
+
+    } catch(e) {
+      console.warn('Routes API falló, usando DistanceMatrix fallback:', e);
+      // Fallback al servicio viejo
+      const svc = new google.maps.DistanceMatrixService();
+      svc.getDistanceMatrix({
+        origins: [{ placeId: state.originPlaceId }],
+        destinations: [{ placeId: state.destPlaceId }],
+        travelMode: google.maps.TravelMode.DRIVING,
+        unitSystem: google.maps.UnitSystem.METRIC
+      }, (response, status) => {
+        if(status === 'OK' && response.rows[0].elements[0].status === 'OK'){
+          const km = response.rows[0].elements[0].distance.value / 1000;
           card.innerHTML = `
             <div class="price-row"><span class="price-label">Tipo de viaje</span><span class="price-value" id="ptriptype">—</span></div>
             <div class="price-row"><span class="price-label">Tarifa base + servicio</span><span class="price-value" id="pbase">—</span></div>
@@ -979,16 +1067,12 @@ async function calcPriceWithDistance(){
           `;
           renderPrice(km);
         } else {
-          showToast('No se pudo calcular la distancia. Intenta con otra dirección.', 'error');
+          showToast('No se pudo calcular la distancia.', 'error');
           card.style.display='none';
         }
-      } else {
-        showToast('Error al consultar Google Maps. Revisa tu conexión.', 'error');
-        card.style.display='none';
-      }
-    });
+      });
+    }
   } else {
-    // Fallback: si no hay placeId, no mostrar precio aún
     card.style.display='none';
     btn.disabled=true;
   }
@@ -1345,7 +1429,6 @@ window.doLogout = doLogout;
 window.handleAddressInput = handleAddressInput;
 window.hideSuggestions = hideSuggestions;
 window.clearAddress = clearAddress;
-window.selectAddress = selectAddress;
 window.selectGoogleAddress = selectGoogleAddress;
 window.addStop = addStop;
 window.removeStop = removeStop;
@@ -1360,20 +1443,23 @@ initTripTypes();
 setTodayDate();
 loadFromFirestore();
 
-// Inicializar Google Maps una vez que esté listo
-if(window.google && window.google.maps){
-  initGoogleServices();
+// Inicializar Google Maps cuando esté listo (via callback __mapsReady)
+async function onMapsReady(){
+  await initGoogleServices();
   checkConnections();
+}
+
+if(window.__googleMapsLoaded || (window.google && window.google.maps)){
+  onMapsReady();
 } else {
-  window.addEventListener('load', () => {
-    if(window.google && window.google.maps){
-      initGoogleServices();
-      checkConnections();
-    } else {
-      // Maps no cargó (key inválida u otro error)
-      checkConnections();
+  window.addEventListener('googlemapsready', onMapsReady);
+  // Timeout fallback: si el callback no llega en 5s
+  setTimeout(() => {
+    if(!placesLib) {
+      if(window.google?.maps) onMapsReady();
+      else checkConnections(); // mostrará errores
     }
-  });
+  }, 5000);
 }
 </script>
 </body>
