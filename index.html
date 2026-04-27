@@ -504,7 +504,66 @@ tr:hover td{background:rgba(201,168,76,.03)}
 
 <div class="toast" id="toast"></div>
 
-<script>
+<script type="module">
+// === FIREBASE ===
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-analytics.js";
+import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, query, orderBy } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyC1Ejy9SdWibnV4ETxEcm378c5Hv2sxnvg",
+  authDomain: "move-f85b6.firebaseapp.com",
+  projectId: "move-f85b6",
+  storageBucket: "move-f85b6.firebasestorage.app",
+  messagingSenderId: "830170196950",
+  appId: "1:830170196950:web:a1d82efabc630c47e1d277",
+  measurementId: "G-Q452XMLBKG"
+};
+
+const firebaseApp = initializeApp(firebaseConfig);
+const analytics = getAnalytics(firebaseApp);
+const db = getFirestore(firebaseApp);
+
+// Cargar reservas y usuarios desde Firestore al iniciar
+async function loadFromFirestore() {
+  try {
+    const bookingsSnap = await getDocs(collection(db, 'bookings'));
+    state.bookings = bookingsSnap.docs.map(d => ({ firestoreId: d.id, ...d.data() }));
+    const usersSnap = await getDocs(collection(db, 'users'));
+    state.users = usersSnap.docs.map(d => ({ firestoreId: d.id, ...d.data() }));
+    // Sincronizar bookingCount
+    const maxCount = state.bookings.reduce((mx, b) => {
+      const n = parseInt((b.id || '#MV-0000').replace('#MV-', '')) || 0;
+      return Math.max(mx, n);
+    }, state.bookingCount);
+    state.bookingCount = maxCount;
+    localStorage.setItem('me_count', maxCount.toString());
+    saveData();
+  } catch(e) {
+    console.warn('Firestore no disponible, usando localStorage:', e);
+  }
+}
+
+async function saveBookingToFirestore(booking) {
+  try {
+    const docRef = await addDoc(collection(db, 'bookings'), booking);
+    return docRef.id;
+  } catch(e) {
+    console.warn('Error guardando en Firestore:', e);
+    return null;
+  }
+}
+
+async function saveUserToFirestore(user) {
+  try {
+    const docRef = await addDoc(collection(db, 'users'), user);
+    return docRef.id;
+  } catch(e) {
+    console.warn('Error guardando usuario en Firestore:', e);
+    return null;
+  }
+}
+
 // === DATOS ===
 const TRIP_TYPES = [
   {
@@ -750,6 +809,29 @@ function calcPrice(){
   btn.disabled = false;
 }
 
+// === VALIDACIÓN DE CONFLICTO DE HORARIO ===
+function hasTimeConflict(date, time) {
+  const newStart = new Date(date + 'T' + time);
+  // Duración estimada mínima de un viaje: 60 minutos de bloqueo
+  const BLOCK_MINUTES = 60;
+
+  for (const b of state.bookings) {
+    // Solo revisar reservas confirmadas o pending_payment del mismo día
+    if (b.status === 'cancelled') continue;
+    if (b.date !== date) continue;
+
+    const existStart = new Date(b.date + 'T' + b.time);
+    const existEnd = new Date(existStart.getTime() + BLOCK_MINUTES * 60 * 1000);
+    const newEnd = new Date(newStart.getTime() + BLOCK_MINUTES * 60 * 1000);
+
+    // Solapamiento: los intervalos se cruzan
+    if (newStart < existEnd && newEnd > existStart) {
+      return b; // retorna la reserva conflictiva
+    }
+  }
+  return null;
+}
+
 // === BOOKING FLOW ===
 function goToConfirm(){
   const orig = document.getElementById('origin').value.trim();
@@ -760,6 +842,13 @@ function goToConfirm(){
   const notes = document.getElementById('tripNotes').value;
 
   if(!orig||!dest||!date||!time){ showToast('Completa todos los campos requeridos','error'); return; }
+
+  // Verificar conflicto de horario
+  const conflicting = hasTimeConflict(date, time);
+  if (conflicting) {
+    showToast(`⚠️ Ya existe una reserva a las ${conflicting.time} el ${conflicting.date}. Elige otro horario (mínimo 1 hora de diferencia).`, 'error');
+    return;
+  }
 
   state.bookingCount++;
   const id = '#MV-'+String(state.bookingCount).padStart(4,'0');
@@ -819,6 +908,7 @@ function finalConfirm(){
   booking.status = 'confirmed';
   state.bookings.push(booking);
   saveData();
+  saveBookingToFirestore(booking);
 
   // Mostrar paso 2
   document.getElementById('confirmNumFinal').textContent = booking.id;
@@ -870,6 +960,7 @@ function doRegister(){
   const user = {name,lastname,email,phone,rut,pass,registeredAt:new Date().toLocaleString('es-CL')};
   state.users.push(user);
   saveData();
+  saveUserToFirestore(user);
   loginUser(user);
 }
 
@@ -984,6 +1075,7 @@ function showToast(msg, type='success'){
 // === INIT ===
 initTripTypes();
 setTodayDate();
+loadFromFirestore();
 </script>
 </body>
 </html>
