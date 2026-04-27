@@ -502,6 +502,57 @@ tr:hover td{background:rgba(201,168,76,.03)}
   </div>
 </div>
 
+<!-- STATUS PANEL -->
+<div id="statusPanel" style="
+  position:fixed;bottom:1.5rem;left:1.5rem;z-index:999;
+  background:var(--dark2);border:1px solid var(--border);border-radius:12px;
+  padding:1rem 1.2rem;min-width:240px;box-shadow:0 8px 32px rgba(0,0,0,.5);
+  font-size:12px;font-family:'DM Sans',sans-serif;
+  transform:translateY(20px);opacity:0;transition:all .4s cubic-bezier(.16,1,.3,1)
+">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.8rem">
+    <span style="font-weight:700;color:var(--text);font-size:13px">🔌 Estado de conexiones</span>
+    <button onclick="document.getElementById('statusPanel').style.display='none'"
+      style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:16px;line-height:1;padding:0">✕</button>
+  </div>
+  <div id="statusFirebase" class="status-row">
+    <span class="status-dot checking"></span>
+    <span class="status-label">Firebase / Firestore</span>
+    <span class="status-val">verificando…</span>
+  </div>
+  <div id="statusGMaps" class="status-row">
+    <span class="status-dot checking"></span>
+    <span class="status-label">Google Maps JS</span>
+    <span class="status-val">verificando…</span>
+  </div>
+  <div id="statusPlaces" class="status-row">
+    <span class="status-dot checking"></span>
+    <span class="status-label">Places API</span>
+    <span class="status-val">verificando…</span>
+  </div>
+  <div id="statusDistMatrix" class="status-row">
+    <span class="status-dot checking"></span>
+    <span class="status-label">Distance Matrix API</span>
+    <span class="status-val">verificando…</span>
+  </div>
+</div>
+
+<style>
+.status-row{display:flex;align-items:center;gap:8px;padding:.35rem 0;border-bottom:1px solid var(--border)}
+.status-row:last-child{border-bottom:none}
+.status-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.status-dot.checking{background:var(--text3);animation:pulse 1s infinite}
+.status-dot.ok{background:#5DD68A}
+.status-dot.error{background:#E07070}
+.status-dot.warn{background:var(--gold)}
+.status-label{flex:1;color:var(--text2)}
+.status-val{color:var(--text3);font-size:11px;text-align:right}
+.status-val.ok{color:#5DD68A}
+.status-val.error{color:#E07070}
+.status-val.warn{color:var(--gold)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+</style>
+
 <div class="toast" id="toast"></div>
 
 <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBDcSRypw-9j_8SSyQxm8qD22VuXNZNbYs&libraries=places&language=es&region=CL"></script>
@@ -525,6 +576,72 @@ const firebaseApp = initializeApp(firebaseConfig);
 const analytics = getAnalytics(firebaseApp);
 const db = getFirestore(firebaseApp);
 
+// === STATUS PANEL ===
+function setStatus(id, state, val){
+  const row = document.getElementById(id);
+  if(!row) return;
+  const dot = row.querySelector('.status-dot');
+  const valEl = row.querySelector('.status-val');
+  dot.className = 'status-dot ' + state;
+  valEl.className = 'status-val ' + state;
+  valEl.textContent = val;
+}
+
+async function checkConnections(){
+  const panel = document.getElementById('statusPanel');
+  panel.style.display = 'block';
+  setTimeout(() => { panel.style.opacity='1'; panel.style.transform='translateY(0)'; }, 50);
+
+  // 1. Google Maps JS
+  if(window.google && window.google.maps){
+    setStatus('statusGMaps', 'ok', '✓ Cargado');
+  } else {
+    setStatus('statusGMaps', 'error', '✗ No disponible');
+  }
+
+  // 2. Places API
+  if(window.google && window.google.maps && window.google.maps.places){
+    try {
+      const svc = new google.maps.places.AutocompleteService();
+      await new Promise((resolve, reject) => {
+        svc.getPlacePredictions({ input: 'Santiago', componentRestrictions:{country:'cl'} }, (res, status) => {
+          if(status === google.maps.places.PlacesServiceStatus.OK) resolve();
+          else reject(status);
+        });
+      });
+      setStatus('statusPlaces', 'ok', '✓ Activa');
+    } catch(e) {
+      setStatus('statusPlaces', 'error', '✗ Error: '+e);
+    }
+  } else {
+    setStatus('statusPlaces', 'error', '✗ No disponible');
+  }
+
+  // 3. Distance Matrix API
+  if(window.google && window.google.maps && window.google.maps.DistanceMatrixService){
+    try {
+      const svc = new google.maps.DistanceMatrixService();
+      await new Promise((resolve, reject) => {
+        svc.getDistanceMatrix({
+          origins: ['Santiago Centro, Santiago, Chile'],
+          destinations: ['Las Condes, Santiago, Chile'],
+          travelMode: google.maps.TravelMode.DRIVING
+        }, (res, status) => {
+          if(status === 'OK' && res.rows[0].elements[0].status === 'OK') resolve(res);
+          else reject(status);
+        });
+      });
+      setStatus('statusDistMatrix', 'ok', '✓ Activa');
+    } catch(e) {
+      setStatus('statusDistMatrix', 'error', '✗ Error: '+e);
+    }
+  } else {
+    setStatus('statusDistMatrix', 'error', '✗ No disponible');
+  }
+
+  // 4. Firebase / Firestore — se actualiza en loadFromFirestore
+}
+
 // Cargar reservas y usuarios desde Firestore al iniciar
 async function loadFromFirestore() {
   try {
@@ -532,7 +649,6 @@ async function loadFromFirestore() {
     state.bookings = bookingsSnap.docs.map(d => ({ firestoreId: d.id, ...d.data() }));
     const usersSnap = await getDocs(collection(db, 'users'));
     state.users = usersSnap.docs.map(d => ({ firestoreId: d.id, ...d.data() }));
-    // Sincronizar bookingCount
     const maxCount = state.bookings.reduce((mx, b) => {
       const n = parseInt((b.id || '#MV-0000').replace('#MV-', '')) || 0;
       return Math.max(mx, n);
@@ -540,8 +656,11 @@ async function loadFromFirestore() {
     state.bookingCount = maxCount;
     localStorage.setItem('me_count', maxCount.toString());
     saveData();
+    setStatus('statusFirebase', 'ok', `✓ ${state.bookings.length} reservas`);
   } catch(e) {
     console.warn('Firestore no disponible, usando localStorage:', e);
+    const msg = e?.code || e?.message || String(e);
+    setStatus('statusFirebase', 'error', '✗ ' + msg.slice(0,28));
   }
 }
 
@@ -1150,9 +1269,16 @@ loadFromFirestore();
 // Inicializar Google Maps una vez que esté listo
 if(window.google && window.google.maps){
   initGoogleServices();
+  checkConnections();
 } else {
   window.addEventListener('load', () => {
-    if(window.google && window.google.maps) initGoogleServices();
+    if(window.google && window.google.maps){
+      initGoogleServices();
+      checkConnections();
+    } else {
+      // Maps no cargó (key inválida u otro error)
+      checkConnections();
+    }
   });
 }
 </script>
