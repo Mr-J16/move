@@ -504,6 +504,7 @@ tr:hover td{background:rgba(201,168,76,.03)}
 
 <div class="toast" id="toast"></div>
 
+<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBDcSRypw-9j_8SSyQxm8qD22VuXNZNbYs&libraries=places&language=es&region=CL"></script>
 <script type="module">
 // === FIREBASE ===
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
@@ -584,70 +585,67 @@ const TRIP_TYPES = [
   }
 ];
 
-// Sugerencias de direcciones para Chile
-const ADDRESS_SUGGESTIONS = {
-  comunes: [
-    {main:'Aeropuerto Internacional AMB',sub:'Pudahuel, Región Metropolitana',icon:'✈️',km:25},
-    {main:'Aeropuerto Internacional Arturo Merino Benítez',sub:'Pudahuel, Santiago',icon:'✈️',km:25},
-    {main:'Terminal Alameda',sub:'Estación Central, Santiago',icon:'🚌',km:6},
-    {main:'Terminal San Borja',sub:'Estación Central, Santiago',icon:'🚌',km:6},
-    {main:'Terminal Los Héroes',sub:'Santiago Centro',icon:'🚌',km:2},
-    {main:'Clínica Las Condes',sub:'Lo Barnechea, Las Condes',icon:'🏥',km:18},
-    {main:'Clínica Bupa Santiago',sub:'Providencia, Santiago',icon:'🏥',km:7},
-    {main:'Hotel W Santiago',sub:'Las Condes, Santiago',icon:'🏨',km:13},
-    {main:'Hotel Ritz-Carlton',sub:'Las Condes, Santiago',icon:'🏨',km:13},
-    {main:'Hotel Mandarin Oriental',sub:'Las Condes, Santiago',icon:'🏨',km:12},
-    {main:'Costanera Center',sub:'Providencia, Santiago',icon:'🏢',km:10},
-    {main:'Parque Arauco',sub:'Las Condes, Santiago',icon:'🛍️',km:14},
-    {main:'Mall Plaza Vespucio',sub:'La Florida, Santiago',icon:'🛍️',km:16},
-    {main:'Universidad de Chile',sub:'Santiago Centro',icon:'🎓',km:1},
-    {main:'Pontificia Universidad Católica',sub:'Santiago / San Joaquín',icon:'🎓',km:5},
-    {main:'Casa de la Moneda',sub:'Santiago Centro',icon:'🏛️',km:0},
-    {main:'Estadio Nacional',sub:'Ñuñoa, Santiago',icon:'⚽',km:8},
-    {main:'La Moneda Palace',sub:'Santiago Centro',icon:'🏛️',km:0},
-  ],
-  comunas: [
-    'Santiago Centro','Providencia','Las Condes','Vitacura','Lo Barnechea',
-    'La Reina','Ñuñoa','Macul','Peñalolén','San Miguel','La Florida',
-    'Puente Alto','Maipú','Cerrillos','Estación Central','Quinta Normal',
-    'Independencia','Recoleta','Quilicura','Huechuraba','Conchalí','Renca',
-    'Pudahuel','Cerro Navia','Lo Espejo','Colina','Lampa','Buin','Paine',
-    'Melipilla','Talagante','Peñaflor','Padre Hurtado'
-  ]
-};
+// === GOOGLE PLACES AUTOCOMPLETE ===
+const GMAPS_KEY = 'AIzaSyBDcSRypw-9j_8SSyQxm8qD22VuXNZNbYs';
+let autocompleteInstances = {}; // field -> { service, sessionToken }
+let placesService = null;
+let distanceMatrixService = null;
 
-function getAddressSuggestions(query){
-  if(!query || query.length < 2) return [];
-  const q = query.toLowerCase();
-  const results = [];
-
-  // Lugares comunes
-  ADDRESS_SUGGESTIONS.comunes.forEach(s=>{
-    if(s.main.toLowerCase().includes(q) || s.sub.toLowerCase().includes(q)){
-      results.push({...s, type:'place'});
-    }
-  });
-
-  // Comunas
-  ADDRESS_SUGGESTIONS.comunas.forEach(c=>{
-    if(c.toLowerCase().includes(q)){
-      results.push({main:c+', Región Metropolitana',sub:'Comuna, Santiago',icon:'📍',km:estimateKm(c),type:'comuna'});
-    }
-  });
-
-  return results.slice(0,6);
+function initGoogleServices(){
+  placesService = new google.maps.places.AutocompleteService();
+  distanceMatrixService = new google.maps.DistanceMatrixService();
 }
 
-function estimateKm(comuna){
-  const map = {
-    'Santiago Centro':2,'Providencia':6,'Las Condes':13,'Vitacura':15,'Lo Barnechea':21,
-    'La Reina':16,'Ñuñoa':9,'Macul':11,'Peñalolén':15,'San Miguel':8,'La Florida':17,
-    'Puente Alto':25,'Maipú':19,'Cerrillos':15,'Estación Central':7,'Quinta Normal':7,
-    'Independencia':6,'Recoleta':6,'Quilicura':17,'Huechuraba':15,'Conchalí':10,'Renca':13,
-    'Pudahuel':17,'Cerro Navia':14,'Lo Espejo':13,'Colina':33,'Lampa':29,'Buin':43,
-    'Paine':51,'Melipilla':66,'Talagante':36,'Peñaflor':39,'Padre Hurtado':23
-  };
-  return map[comuna] || 15;
+// Pedir sugerencias a Google Places
+function getGoogleSuggestions(query, field){
+  if(!query || query.length < 2) return;
+  const sug = document.getElementById(field+'Sug');
+
+  placesService.getPlacePredictions({
+    input: query,
+    componentRestrictions: { country: 'cl' },
+    language: 'es',
+    types: ['geocode', 'establishment']
+  }, (predictions, status) => {
+    if(status !== google.maps.places.PlacesServiceStatus.OK || !predictions){
+      sug.classList.remove('open');
+      return;
+    }
+    sug.innerHTML = predictions.map((p, i) => `
+      <div class="suggestion-item" onmousedown="selectGoogleAddress('${field}',${i})">
+        <span class="sug-icon">📍</span>
+        <div>
+          <div class="sug-main">${p.structured_formatting.main_text}</div>
+          <div class="sug-sub">${p.structured_formatting.secondary_text || ''}</div>
+        </div>
+      </div>
+    `).join('');
+    sug.dataset.predictions = JSON.stringify(predictions.map(p=>({
+      placeId: p.place_id,
+      main: p.structured_formatting.main_text,
+      full: p.description
+    })));
+    sug.classList.add('open');
+  });
+}
+
+function selectGoogleAddress(field, idx){
+  const sug = document.getElementById(field+'Sug');
+  const predictions = JSON.parse(sug.dataset.predictions || '[]');
+  const pred = predictions[idx];
+  if(!pred) return;
+
+  const input = document.getElementById(field);
+  input.value = pred.full;
+  const wrap = document.getElementById(field === 'origin' ? 'originWrap' : 'destWrap');
+  wrap.classList.add('has-value');
+  sug.classList.remove('open');
+
+  // Guardar placeId en state para Distance Matrix
+  if(field === 'origin') state.originPlaceId = pred.placeId;
+  if(field === 'destination') state.destPlaceId = pred.placeId;
+
+  calcPriceWithDistance();
 }
 
 let state = {
@@ -661,7 +659,10 @@ let state = {
   currentBookingId: null,
   bookingCount: parseInt(localStorage.getItem('me_count')||'0'),
   originKm: 0,
-  destKm: 0
+  destKm: 0,
+  originPlaceId: null,
+  destPlaceId: null,
+  realDistanceKm: null
 };
 
 function saveData(){
@@ -670,59 +671,39 @@ function saveData(){
   localStorage.setItem('me_count', state.bookingCount.toString());
 }
 
-// === AUTOCOMPLETE ===
+// === AUTOCOMPLETE (Google Places) ===
+let _autocompleteTimer = {};
+
 function handleAddressInput(field){
   const input = document.getElementById(field);
-  const sug = document.getElementById(field+'Sug');
-  const wrap = document.getElementById(field==='origin'?'originWrap':'destWrap');
+  const wrap = document.getElementById(field === 'origin' ? 'originWrap' : 'destWrap');
   const val = input.value.trim();
-
   wrap.classList.toggle('has-value', val.length > 0);
 
-  if(val.length < 2){ sug.classList.remove('open'); return; }
-  const suggestions = getAddressSuggestions(val);
-  if(!suggestions.length){ sug.classList.remove('open'); return; }
+  // Limpiar placeId si el usuario escribe manualmente
+  if(field === 'origin') state.originPlaceId = null;
+  if(field === 'destination') state.destPlaceId = null;
 
-  sug.innerHTML = suggestions.map((s,i)=>`
-    <div class="suggestion-item" onmousedown="selectAddress('${field}',${i})">
-      <span class="sug-icon">${s.icon}</span>
-      <div>
-        <div class="sug-main">${s.main}</div>
-        <div class="sug-sub">${s.sub}</div>
-      </div>
-    </div>
-  `).join('');
-  sug.dataset.items = JSON.stringify(suggestions);
-  sug.classList.add('open');
-}
+  clearTimeout(_autocompleteTimer[field]);
+  if(val.length < 2){ document.getElementById(field+'Sug').classList.remove('open'); return; }
 
-function selectAddress(field, idx){
-  const sug = document.getElementById(field+'Sug');
-  const items = JSON.parse(sug.dataset.items||'[]');
-  const item = items[idx];
-  if(!item) return;
-
-  document.getElementById(field).value = item.main;
-  document.getElementById(field==='origin'?'originWrap':'destWrap').classList.add('has-value');
-  sug.classList.remove('open');
-
-  if(field==='origin') state.originKm = item.km || 15;
-  if(field==='destination') state.destKm = item.km || 15;
-  calcPrice();
+  // Debounce 300ms para no spamear la API
+  _autocompleteTimer[field] = setTimeout(() => getGoogleSuggestions(val, field), 300);
 }
 
 function hideSuggestions(field, delay){
   setTimeout(()=>{
     document.getElementById(field+'Sug').classList.remove('open');
-  }, delay||0);
+  }, delay || 0);
 }
 
 function clearAddress(field){
-  document.getElementById(field).value='';
-  document.getElementById(field==='origin'?'originWrap':'destWrap').classList.remove('has-value');
+  document.getElementById(field).value = '';
+  document.getElementById(field === 'origin' ? 'originWrap' : 'destWrap').classList.remove('has-value');
   document.getElementById(field+'Sug').classList.remove('open');
-  if(field==='origin') state.originKm=0;
-  if(field==='destination') state.destKm=0;
+  if(field === 'origin'){ state.originKm = 0; state.originPlaceId = null; }
+  if(field === 'destination'){ state.destKm = 0; state.destPlaceId = null; }
+  state.realDistanceKm = null;
   calcPrice();
 }
 
@@ -777,22 +758,20 @@ function initTripTypes(){
   });
 }
 
-// === PRECIO ===
-function calcPrice(){
+// === PRECIO CON DISTANCE MATRIX ===
+function renderPrice(km){
   const orig = document.getElementById('origin').value.trim();
   const dest = document.getElementById('destination').value.trim();
   const card = document.getElementById('priceCard');
   const btn = document.getElementById('btnBook');
-
   if(!orig || !dest){ card.style.display='none'; btn.disabled=true; return; }
 
-  const oKm = state.originKm || 10;
-  const dKm = state.destKm || 15;
-  let km = Math.max(Math.abs(dKm - oKm) + Math.max(oKm,dKm)*0.25, 3);
-  state.stops.forEach(()=>{ km += 4; });
+  state.realDistanceKm = km;
+  let totalKm = km;
+  state.stops.forEach(() => { totalKm += 4; }); // +4km por parada
 
   const tripType = TRIP_TYPES.find(t=>t.id===state.selectedTripType)||TRIP_TYPES[0];
-  const baseFare = 2500 + km * 380;
+  const baseFare = 2500 + totalKm * 380;
   const surgeBase = tripType.mult > 1 ? baseFare*(tripType.mult-1) : 0;
   const total = Math.round((baseFare + surgeBase)/500)*500;
   state.currentPrice = total;
@@ -801,12 +780,83 @@ function calcPrice(){
   document.getElementById('ptriptype').textContent = tripType.name;
   document.getElementById('pbase').textContent = '$'+Math.round(baseFare).toLocaleString('es-CL');
   const surgeRow = document.getElementById('psurgeRow');
-  if(surgeBase>0){
+  if(surgeBase > 0){
     surgeRow.style.display='flex';
     document.getElementById('psurge').textContent = '+$'+Math.round(surgeBase).toLocaleString('es-CL');
   } else surgeRow.style.display='none';
   document.getElementById('ptotal').textContent = '$'+total.toLocaleString('es-CL');
+
+  // Mostrar distancia real
+  let distRow = document.getElementById('pdistRow');
+  if(!distRow){
+    const firstRow = card.querySelector('.price-row');
+    distRow = document.createElement('div');
+    distRow.className = 'price-row';
+    distRow.id = 'pdistRow';
+    card.insertBefore(distRow, firstRow);
+  }
+  distRow.innerHTML = `<span class="price-label">📏 Distancia real (Google Maps)</span><span class="price-value" style="color:var(--gold)">${km.toFixed(1)} km</span>`;
+
   btn.disabled = false;
+}
+
+async function calcPriceWithDistance(){
+  const orig = document.getElementById('origin').value.trim();
+  const dest = document.getElementById('destination').value.trim();
+  const card = document.getElementById('priceCard');
+  const btn = document.getElementById('btnBook');
+
+  if(!orig || !dest){ card.style.display='none'; btn.disabled=true; return; }
+
+  // Si tenemos ambos placeIds, usar Distance Matrix
+  if(state.originPlaceId && state.destPlaceId){
+    card.innerHTML = `<div style="text-align:center;padding:1rem;color:var(--text3);font-size:13px">📡 Calculando distancia real...</div>`;
+    card.style.display='block';
+    btn.disabled = true;
+
+    distanceMatrixService.getDistanceMatrix({
+      origins: [{ placeId: state.originPlaceId }],
+      destinations: [{ placeId: state.destPlaceId }],
+      travelMode: google.maps.TravelMode.DRIVING,
+      unitSystem: google.maps.UnitSystem.METRIC,
+      language: 'es'
+    }, (response, status) => {
+      if(status === 'OK'){
+        const element = response.rows[0].elements[0];
+        if(element.status === 'OK'){
+          const km = element.distance.value / 1000;
+          // Restaurar estructura del card
+          card.innerHTML = `
+            <div class="price-row"><span class="price-label">Tipo de viaje</span><span class="price-value" id="ptriptype">—</span></div>
+            <div class="price-row"><span class="price-label">Tarifa base + servicio</span><span class="price-value" id="pbase">—</span></div>
+            <div class="price-row" id="psurgeRow" style="display:none"><span class="price-label" id="psurgeLabel">Recargo nocturno</span><span class="price-value" id="psurge">—</span></div>
+            <div class="price-total-row"><span class="price-total-label">Total estimado</span><span class="price-total-value" id="ptotal">—</span></div>
+            <p class="price-note">⚠️ Precio referencial en pesos chilenos. El viaje se confirma tras verificar el comprobante de transferencia bancaria.</p>
+          `;
+          renderPrice(km);
+        } else {
+          showToast('No se pudo calcular la distancia. Intenta con otra dirección.', 'error');
+          card.style.display='none';
+        }
+      } else {
+        showToast('Error al consultar Google Maps. Revisa tu conexión.', 'error');
+        card.style.display='none';
+      }
+    });
+  } else {
+    // Fallback: si no hay placeId, no mostrar precio aún
+    card.style.display='none';
+    btn.disabled=true;
+  }
+}
+
+// calcPrice sigue siendo usado al cambiar tipo de viaje o quitar paradas
+function calcPrice(){
+  if(state.realDistanceKm){
+    renderPrice(state.realDistanceKm);
+  } else {
+    calcPriceWithDistance();
+  }
 }
 
 // === VALIDACIÓN DE CONFLICTO DE HORARIO ===
@@ -1072,10 +1122,39 @@ function showToast(msg, type='success'){
   setTimeout(()=>t.classList.remove('show'), 3500);
 }
 
+// === EXPONER FUNCIONES GLOBALES (requerido por type="module") ===
+window.showView = showView;
+window.setAuthMode = setAuthMode;
+window.switchAuthTab = switchAuthTab;
+window.doLogin = doLogin;
+window.doRegister = doRegister;
+window.doLogout = doLogout;
+window.handleAddressInput = handleAddressInput;
+window.hideSuggestions = hideSuggestions;
+window.clearAddress = clearAddress;
+window.selectAddress = selectAddress;
+window.selectGoogleAddress = selectGoogleAddress;
+window.addStop = addStop;
+window.removeStop = removeStop;
+window.updateStop = updateStop;
+window.goToConfirm = goToConfirm;
+window.validateTransferCode = validateTransferCode;
+window.finalConfirm = finalConfirm;
+window.newBooking = newBooking;
+
 // === INIT ===
 initTripTypes();
 setTodayDate();
 loadFromFirestore();
+
+// Inicializar Google Maps una vez que esté listo
+if(window.google && window.google.maps){
+  initGoogleServices();
+} else {
+  window.addEventListener('load', () => {
+    if(window.google && window.google.maps) initGoogleServices();
+  });
+}
 </script>
 </body>
 </html>
